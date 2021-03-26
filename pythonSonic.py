@@ -26,11 +26,16 @@ while True:
  """
 async def sonicSensor():
     sonar = adafruit_hcsr04.HCSR04(trigger_pin=board.D23, echo_pin=board.D24)
+    
     while True:
+        goodRead = True
         try:
-            print((sonar.distance * 0.3937008,))
+            val = sonar.distance * 0.3937008
         except RuntimeError:
             print("Retrying!")
+            goodRead = False
+        if goodRead:
+            print(f'dist= {val}')
         await asyncio.sleep(3)
 
 def setup():
