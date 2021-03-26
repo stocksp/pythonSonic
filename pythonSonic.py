@@ -36,7 +36,7 @@ async def sonicSensor():
             goodRead = False
         if goodRead:
             print(f'dist= {val}')
-        await asyncio.sleep(15)
+        await asyncio.sleep(5)
 
 def setup():
     mongoURI = os.getenv("MONGO_URL")
