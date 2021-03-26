@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 import os
-import time
+from time import sleep
 import board
 import adafruit_hcsr04
 from datetime import datetime, timezone, timedelta
