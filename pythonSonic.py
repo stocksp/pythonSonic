@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 import os
 import RPi.GPIO as GPIO
-from time import sleep
+from time
 #import board
 #import adafruit_hcsr04
 from datetime import datetime, timezone, timedelta

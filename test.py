@@ -38,14 +38,14 @@ def distance():
     # multiply with the sonic speed (34300 cm/s)
     # and divide by 2, because there and back
     distance = (TimeElapsed * 34300) / 2
-
-    return distance
+    #convert to inch
+    return distance * 0.3937008
 
 
 if __name__ == '__main__':
     try:
         while True:
-            dist = distance() * 0.3937008
+            dist = distance()
             print("Measured Distance = %.1f cm" % dist)
             time.sleep(5)
 
