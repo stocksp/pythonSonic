@@ -1,8 +1,9 @@
 from dotenv import load_dotenv
 import os
+import RPi.GPIO as GPIO
 from time import sleep
-import board
-import adafruit_hcsr04
+#import board
+#import adafruit_hcsr04
 from datetime import datetime, timezone, timedelta
 
 import asyncio
@@ -12,31 +13,66 @@ load_dotenv()
 timezone_offset = -8.0  # Pacific Standard Time (UTC−08:00)
 tzinfo = timezone(timedelta(hours=timezone_offset))
 db = None
+# GPIO Mode (BOARD / BCM)
+GPIO.setmode(GPIO.BCM)
 
-""" mongoURI = os.getenv("MONGO_URL")
-print(mongoURI)
+# set GPIO Pins
+GPIO_TRIGGER = 23
+GPIO_ECHO = 24
 
-sonar = adafruit_hcsr04.HCSR04(trigger_pin=board.D23, echo_pin=board.D24)
-while True:
-    try:
-        print((sonar.distance,))
-    except RuntimeError:
-        print("Retrying!")
-    time.sleep(0.1)
- """
+# set GPIO direction (IN / OUT)
+GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
+GPIO.setup(GPIO_ECHO, GPIO.IN)
+
+def distance():
+    # set Trigger to HIGH
+    GPIO.output(GPIO_TRIGGER, True)
+
+    # set Trigger after 0.01ms to LOW
+    time.sleep(0.00001)
+    GPIO.output(GPIO_TRIGGER, False)
+
+    StartTime = time.time()
+    StopTime = time.time()
+
+    # save StartTime
+    while GPIO.input(GPIO_ECHO) == 0:
+        StartTime = time.time()
+
+    # save time of arrival
+    while GPIO.input(GPIO_ECHO) == 1:
+        StopTime = time.time()
+
+    # time difference between start and arrival
+    TimeElapsed = StopTime - StartTime
+    # multiply with the sonic speed (34300 cm/s)
+    # and divide by 2, because there and back
+    distance = (TimeElapsed * 34300) / 2
+    #convert to inches
+    return distance * 0.3937008
+
 async def sonicSensor():
-    sonar = adafruit_hcsr04.HCSR04(trigger_pin=board.D23, echo_pin=board.D24)
+    try:
+        while True:
+            dist = distance()
+            print("Measured Distance = %.1f cm" % dist)
+            await asyncio.sleep(5)
+
+        # Reset by pressing CTRL + C
+    except KeyboardInterrupt:
+        print("Measurement stopped by User")
+        GPIO.cleanup()
     
-    while True:
-        goodRead = True
-        try:
-            val = sonar.distance * 0.3937008
-        except RuntimeError:
-            print("Retrying!")
-            goodRead = False
-        if goodRead:
-            print(f'dist= {val}')
-        await asyncio.sleep(5)
+    # while True:
+    #     goodRead = True
+    #     try:
+    #         val = sonar.distance * 0.3937008
+    #     except RuntimeError:
+    #         print("Retrying!")
+    #         goodRead = False
+    #     if goodRead:
+    #         print(f'dist= {val}')
+        
 
 def setup():
     mongoURI = os.getenv("MONGO_URL")
