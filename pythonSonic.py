@@ -85,7 +85,7 @@ def setup():
         except Exception as err:
             print("failed to make MonbgoClient", flush=True)
             print(err, flush=True)
-        sleep(5)
+        time.sleep(5)
 
 if __name__ == "__main__":
     async def main():
