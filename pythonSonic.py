@@ -73,9 +73,9 @@ async def sonicSensor():
                 distList.pop(0)
             currentAve = mean(distList)
             msg = (
-                f'{theDist:.1f} inches previous ave {previousAve:.1f}'
-                f'current ave{currentAve:.1f}'
-                f'lastUpdateValue {lastUpdateValue}'
+                f'{theDist:.1f} inches, previous ave = {previousAve:.1f},'
+                f'current ave={currentAve:.1f},'
+                f'lastUpdateValue={lastUpdateValue}'
             )
             print(msg)
             await asyncio.sleep(5)
