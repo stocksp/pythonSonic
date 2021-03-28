@@ -24,6 +24,7 @@ GPIO_ECHO = 24
 GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
 GPIO.setup(GPIO_ECHO, GPIO.IN)
 
+
 def distance():
     try:
         # set Trigger to HIGH
@@ -49,11 +50,12 @@ def distance():
         # multiply with the sonic speed (34300 cm/s)
         # and divide by 2, because there and back
         distance = (TimeElapsed * 34300) / 2
-        #convert to inches
+        # convert to inches
         return distance * 0.3937008
     except Exception as err:
         print(f'Error reading sensor {err}', flush=True)
         return 0
+
 
 async def sonicSensor():
     distList = []
@@ -68,6 +70,9 @@ async def sonicSensor():
                 previousAve = 0.0
             if theDist != 0:
                 distList.append(theDist)
+            # keep reading until 6 elements
+            if len(distList) < 6:
+                continue
             # keep list at 6 AND remove errors of 0
             if len(distList) > 6:
                 distList.pop(0)
@@ -78,13 +83,46 @@ async def sonicSensor():
                 f'lastUpdateValue={lastUpdateValue}'
             )
             print(msg)
+            diffDist = abs(lastUpdateValue - currentAve)
+            if diffDist > 0.1:
+                print(f'Need to do a change update {diffDist}', flush=True)
+                lastUpdate = datetime.now(tzinfo)
+                lastUpdateValue = currentAve
+                try:
+                    if db:
+                        collection = db.pythonTest
+                        x = collection.insert_one(
+                            {'distance': currentAve, 'when': lastUpdate}
+                        )
+                        print(f"db says {x} ", flush=True)
+                except Exception as err:
+                    print("mongodb insert failed for dist change", flush=True)
+                    exception_type = type(err).__name__
+                    print(exception_type, flush=True)
+
+            # send an update if we haven't in an hour and half
+            elif (datetime.now(tzinfo) - lastUpdate).total_seconds() > 60 * 30:
+                print(f'Need to do a timed update {(datetime.now(tzinfo) - lastUpdate).total_seconds()}', flush=True)
+                lastUpdate = datetime.now(tzinfo)
+                lastUpdateValue = currentAve
+                try:
+                    if db:
+                        collection = db.pythonTest
+                        x = collection.insert_one(
+                            {'distance': currentAve, 'when': lastUpdate}
+                        )
+                except Exception as err:
+                    print("mongodb insert failed for dist past time", flush=True)
+                    exception_type = type(err).__name__
+                    print(exception_type, flush=True)
+
             await asyncio.sleep(5)
 
         # Reset by pressing CTRL + C
     except KeyboardInterrupt:
         print("Measurement stopped by User")
         GPIO.cleanup()
-    
+
     # while True:
     #     goodRead = True
     #     try:
@@ -94,7 +132,7 @@ async def sonicSensor():
     #         goodRead = False
     #     if goodRead:
     #         print(f'dist= {val}')
-        
+
 
 def setup():
     mongoURI = os.getenv("MONGO_URL")
@@ -108,6 +146,7 @@ def setup():
             print("failed to make MonbgoClient", flush=True)
             print(err, flush=True)
         time.sleep(5)
+
 
 if __name__ == "__main__":
     async def main():
