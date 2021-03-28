@@ -140,7 +140,7 @@ async def tempSensor():
     DHT_SENSOR = Adafruit_DHT.DHT22
     sensor = {
             'name' : "Tank Climate inside",
-            'pin' : 17,
+            'pin' : 4,
             'lastTempUpdate' : datetime.now(tzinfo),
             'temperature' : 0,
             'dbTemperature' : 0,
