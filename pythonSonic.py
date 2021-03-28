@@ -63,7 +63,7 @@ async def sonicSensor():
     try:
         while True:
             theDist = distance()
-            print("Measured Distance = %.1f cm" % theDist)
+            print("Measured Distance = %.1f inches" % theDist)
             if len(distList) > 0:
                 previousAve = round(mean(distList), 2)
             else:
