@@ -65,7 +65,7 @@ async def sonicSensor():
             theDist = distance()
             print("Measured Distance = %.1f cm" % theDist)
             if len(distList) > 0:
-                previousAve = mean(distList)
+                previousAve = round(mean(distList), 2)
             else:
                 previousAve = 0.0
             if theDist != 0:
@@ -76,7 +76,7 @@ async def sonicSensor():
             # keep list at 6 AND remove errors of 0
             if len(distList) > 6:
                 distList.pop(0)
-            currentAve = mean(distList)
+            currentAve = round(mean(distList), 2)
             msg = (
                 f'{theDist:.1f} inches, previous ave = {previousAve:.1f},'
                 f'current ave={currentAve:.1f},'
@@ -102,7 +102,8 @@ async def sonicSensor():
 
             # send an update if we haven't in an hour and half
             elif (datetime.now(tzinfo) - lastUpdate).total_seconds() > 60 * 30:
-                print(f'Need to do a timed update {(datetime.now(tzinfo) - lastUpdate).total_seconds()}', flush=True)
+                print(
+                    f'Need to do a timed update {(datetime.now(tzinfo) - lastUpdate).total_seconds()}', flush=True)
                 lastUpdate = datetime.now(tzinfo)
                 lastUpdateValue = currentAve
                 try:
