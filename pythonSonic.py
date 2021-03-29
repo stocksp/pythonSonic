@@ -79,7 +79,7 @@ async def voltage():
                 startingUp = False
                 if db:
                     try:
-                        collection = db.pythonTest
+                        collection = db.voltage
                         x = collection.insert_one(
                             {
                                 "voltage": round(voltage,1),
@@ -129,7 +129,7 @@ async def sonicSensor():
                 lastUpdateValue = currentAve
                 try:
                     if db:
-                        collection = db.pythonTest
+                        collection = db.waterDistance
                         x = collection.insert_one(
                             {'distance': currentAve, 'when': lastUpdate}
                         )
@@ -147,7 +147,7 @@ async def sonicSensor():
                 lastUpdateValue = currentAve
                 try:
                     if db:
-                        collection = db.pythonTest
+                        collection = db.waterDistance
                         x = collection.insert_one(
                             {'distance': currentAve, 'when': lastUpdate}
                         )
@@ -216,7 +216,7 @@ async def tempSensor():
                     sensor["dbHumidity"] = h
                     try:
                         # print('we have a db')
-                        collection = db.pythonTest
+                        collection = db.climate
                         x = collection.insert_one(
                             {
                                 "name": sensor["name"],
@@ -241,7 +241,7 @@ async def tempSensor():
                 if db:
                     try:
                         # print('we have a db')
-                        collection = db.pythonTest
+                        collection = db.climate
                         x = collection.insert_one(
                             {
                                 "name": sensor["name"],
