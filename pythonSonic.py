@@ -68,7 +68,8 @@ async def voltage():
     try:
         while True:
             value = adc.read(channel=0)
-            voltage = (value * 5) / (1023.0 * 3.3)
+            # fudge factor added of .815
+            voltage = (value * 5 *  * 0.815) / (1023.0 * 3.3)
             print(f'Voltage: {voltage:.2f} %')
             # voltDiff = abs(voltage - lastVoltageUpdate)
             secDiff = (
