@@ -111,17 +111,17 @@ async def sonicSensor():
             if theDist != 0:
                 distList.append(theDist)
             # keep reading until 6 elements
-            if starting and len(distList) < 20:
+            if starting and len(distList) < 30:
                 continue
             else:
                 starting = False
 
             #ignore bad values?
-            if abs(theDist - previousAve) > 1.5:
+            if abs(theDist - previousAve) > 2.0:
                 print(f'ignoring {theDist}', flush=True)
                 continue
             # keep list at 6 AND remove errors of 0
-            if len(distList) > 6:
+            if len(distList) > 30:
                 distList.pop(0)
             currentAve = round(mean(distList), 2)
             msg = (
