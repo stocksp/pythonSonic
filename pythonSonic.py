@@ -62,7 +62,7 @@ def distance():
 async def voltage():
     adc = MCP3008()
     #lastVoltageWrite = 0
-    lastVoltageUpdate = datetime(tzinfo)
+    lastVoltageUpdate = datetime.now(tzinfo)
     startingUp = True
 
     try:
