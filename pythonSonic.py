@@ -99,6 +99,7 @@ async def voltage():
 async def sonicSensor():
     distList = []
     lastUpdateValue = 0.0
+    starting = True
     try:
         while True:
             theDist = distance()
@@ -110,8 +111,11 @@ async def sonicSensor():
             if theDist != 0:
                 distList.append(theDist)
             # keep reading until 6 elements
-            if len(distList) < 6:
+            if starting and len(distList) < 20:
                 continue
+            else
+                starting = False
+                
             #ignore bad values?
             if abs(theDist - previousAve) > 1.5:
                 continue
