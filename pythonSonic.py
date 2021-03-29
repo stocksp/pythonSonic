@@ -112,6 +112,9 @@ async def sonicSensor():
             # keep reading until 6 elements
             if len(distList) < 6:
                 continue
+            #ignore bad values?
+            if abs(theDist - previousAve) > 1.5:
+                continue
             # keep list at 6 AND remove errors of 0
             if len(distList) > 6:
                 distList.pop(0)
