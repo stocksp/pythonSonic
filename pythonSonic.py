@@ -9,6 +9,7 @@ from statistics import mean
 import asyncio
 from pymongo import MongoClient
 import Adafruit_DHT
+from MCP3008 import MCP3008
 
 load_dotenv()
 timezone_offset = -8.0  # Pacific Standard Time (UTC−08:00)
@@ -56,6 +57,42 @@ def distance():
     except Exception as err:
         print(f'Error reading sensor {err}', flush=True)
         return 0
+
+
+async def voltage():
+    adc = MCP3008()
+    #lastVoltageWrite = 0
+    lastVoltageUpdate = datetime(tzinfo)
+    startingUp = True
+
+    try:
+        while True:
+            value = adc.read(channel=0)
+            voltage = (value * 5) / (1023.0 * 3.3)
+            print(f'Voltage: {voltage:.2f} %')
+            # voltDiff = abs(voltage - lastVoltageUpdate)
+            secDiff = (
+                datetime.now(tzinfo) - lastVoltageUpdate
+            ).total_seconds()
+            if startingUp or secDiff > 60 * 30:
+                startingUp = False
+                if db:
+                    try:
+                        collection = db.pythonTest
+                        x = collection.insert_one(
+                            {
+                                "voltage": round(voltage,1),
+                                "when": datetime.now(tzinfo),
+                                
+                            }
+                        )
+                        print(f"db for voltage says {x} ", flush=True)
+                    except:
+                        print("mongodb insert failed voltage", flush=True)
+
+            await asyncio.sleep(15)
+    except KeyboardInterrupt:
+        print("Measurement stopped by User")
 
 
 async def sonicSensor():
@@ -139,13 +176,13 @@ async def sonicSensor():
 async def tempSensor():
     DHT_SENSOR = Adafruit_DHT.DHT22
     sensor = {
-            'name' : "Tank Climate inside",
-            'pin' : 4,
-            'lastTempUpdate' : datetime.now(tzinfo),
-            'temperature' : 0,
-            'dbTemperature' : 0,
-            'humidity' : 0,
-            'dbHumidity' : 0,
+        'name': "Tank Climate inside",
+        'pin': 4,
+        'lastTempUpdate': datetime.now(tzinfo),
+        'temperature': 0,
+        'dbTemperature': 0,
+        'humidity': 0,
+        'dbHumidity': 0,
     }
     while True:
 
@@ -233,6 +270,7 @@ async def tempSensor():
             )
         await asyncio.sleep(15)
 
+
 def setup():
     mongoURI = os.getenv("MONGO_URL")
     global db
@@ -254,6 +292,7 @@ if __name__ == "__main__":
         await asyncio.gather(
             sonicSensor(),
             tempSensor(),
+            voltage()
         )
 
     asyncio.run(main())
