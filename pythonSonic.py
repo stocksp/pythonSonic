@@ -93,7 +93,7 @@ async def voltage():
 
             await asyncio.sleep(15)
     except KeyboardInterrupt:
-        print("Measurement stopped by User")
+        print("Measurement stopped by User", flush=True)
 
 
 async def sonicSensor():
@@ -103,7 +103,7 @@ async def sonicSensor():
     try:
         while True:
             theDist = distance()
-            print("Measured Distance = %.1f inches" % theDist)
+            print("Measured Distance = %.1f inches" % theDist, flush=True)
             if len(distList) > 0:
                 previousAve = round(mean(distList), 2)
             else:
@@ -118,6 +118,7 @@ async def sonicSensor():
 
             #ignore bad values?
             if abs(theDist - previousAve) > 1.5:
+                print(f'ignoring {theDist}', flush=True)
                 continue
             # keep list at 6 AND remove errors of 0
             if len(distList) > 6:
