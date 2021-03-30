@@ -120,6 +120,7 @@ async def sonicSensor():
             #ignore bad values?
             if abs(theDist - previousAve) > 2.0:
                 print(f'ignoring {theDist}', flush=True)
+                distList.pop()
                 continue
             # keep list at 6 AND remove errors of 0
             if len(distList) > 15:
