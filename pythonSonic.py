@@ -112,21 +112,21 @@ async def sonicSensor():
                 distList.append(theDist)
             # keep reading until 6 elements
             if starting and len(distList) < 15:
-                asyncio.sleep(5)
+                await asyncio.sleep(5)
                 continue
             elif starting:
                 starting = False
                 standardDev = stdev(distList)
                 ave = mean(distList)
                 distList = list(filter(lambda x: abs(x - ave) < standardDev, distList))
-                asyncio.sleep(5)
+                await asyncio.sleep(5)
                 continue
 
             # ignore bad values?
             if abs(theDist - previousAve) > 2.0:
                 print(f"ignoring {theDist}", flush=True)
                 distList.pop()
-                asyncio.sleep(10)
+                await asyncio.sleep(10)
                 continue
             # keep list at 6 AND remove errors of 0
             if len(distList) > 15:
