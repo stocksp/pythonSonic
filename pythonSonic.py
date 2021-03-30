@@ -77,6 +77,7 @@ async def voltage():
             ).total_seconds()
             if startingUp or secDiff > 60 * 30:
                 startingUp = False
+                lastVoltageUpdate = datetime.now(tzinfo)
                 if db:
                     try:
                         collection = db.voltage
