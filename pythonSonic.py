@@ -2,14 +2,16 @@ from dotenv import load_dotenv
 import os
 import RPi.GPIO as GPIO
 import time
+
 # import board
 # import adafruit_hcsr04
 from datetime import datetime, timezone, timedelta
-from statistics import mean
 import asyncio
 from pymongo import MongoClient
 import Adafruit_DHT
 from MCP3008 import MCP3008
+from statistics import stdev
+from statistics import mean
 
 load_dotenv()
 timezone_offset = -8.0  # Pacific Standard Time (UTC−08:00)
@@ -55,13 +57,13 @@ def distance():
         # convert to inches
         return distance * 0.3937008
     except Exception as err:
-        print(f'Error reading sensor {err}', flush=True)
+        print(f"Error reading sensor {err}", flush=True)
         return 0
 
 
 async def voltage():
     adc = MCP3008()
-    #lastVoltageWrite = 0
+    # lastVoltageWrite = 0
     lastVoltageUpdate = datetime.now(tzinfo)
     startingUp = True
 
@@ -69,12 +71,10 @@ async def voltage():
         while True:
             value = adc.read(channel=0)
             # fudge factor added of .815
-            voltage = (value * 5 * 0.815 / 1023.0 * 3.3)
-            print(f'Voltage: {voltage:.2f}')
+            voltage = value * 5 * 0.815 / 1023.0 * 3.3
+            print(f"Voltage: {voltage:.2f}")
             # voltDiff = abs(voltage - lastVoltageUpdate)
-            secDiff = (
-                datetime.now(tzinfo) - lastVoltageUpdate
-            ).total_seconds()
+            secDiff = (datetime.now(tzinfo) - lastVoltageUpdate).total_seconds()
             if startingUp or secDiff > 60 * 30:
                 startingUp = False
                 lastVoltageUpdate = datetime.now(tzinfo)
@@ -83,9 +83,8 @@ async def voltage():
                         collection = db.voltage
                         x = collection.insert_one(
                             {
-                                "voltage": round(voltage,1),
+                                "voltage": round(voltage, 1),
                                 "when": datetime.now(tzinfo),
-                                
                             }
                         )
                         print(f"db for voltage says {x} ", flush=True)
@@ -114,12 +113,16 @@ async def sonicSensor():
             # keep reading until 6 elements
             if starting and len(distList) < 15:
                 continue
-            else:
+            elif starting:
                 starting = False
+                standardDev = stdev(distList)
+                ave = mean(distList)
+                distList = list(filter(lambda x: abs(x - ave) < standardDev, distList))
+                continue
 
-            #ignore bad values?
+            # ignore bad values?
             if abs(theDist - previousAve) > 2.0:
-                print(f'ignoring {theDist}', flush=True)
+                print(f"ignoring {theDist}", flush=True)
                 distList.pop()
                 continue
             # keep list at 6 AND remove errors of 0
@@ -127,21 +130,21 @@ async def sonicSensor():
                 distList.pop(0)
             currentAve = round(mean(distList), 2)
             msg = (
-                f'{theDist:.1f} inches, previous ave = {previousAve:.1f},'
-                f'current ave={currentAve:.1f},'
-                f'lastUpdateValue={lastUpdateValue}'
+                f"{theDist:.1f} inches, previous ave = {previousAve:.1f},"
+                f"current ave={currentAve:.1f},"
+                f"lastUpdateValue={lastUpdateValue}"
             )
             print(msg)
             diffDist = abs(lastUpdateValue - currentAve)
             if diffDist > 0.1:
-                print(f'Need to do a change update {diffDist}', flush=True)
+                print(f"Need to do a change update {diffDist}", flush=True)
                 lastUpdate = datetime.now(tzinfo)
                 lastUpdateValue = currentAve
                 try:
                     if db:
                         collection = db.waterDistance
                         x = collection.insert_one(
-                            {'distance': round(currentAve, 1), 'when': lastUpdate}
+                            {"distance": round(currentAve, 1), "when": lastUpdate}
                         )
                         print(f"db says {x} ", flush=True)
                 except Exception as err:
@@ -152,14 +155,16 @@ async def sonicSensor():
             # send an update if we haven't in an hour and half
             elif (datetime.now(tzinfo) - lastUpdate).total_seconds() > 60 * 30:
                 print(
-                    f'Need to do a timed update {(datetime.now(tzinfo) - lastUpdate).total_seconds()}', flush=True)
+                    f"Need to do a timed update {(datetime.now(tzinfo) - lastUpdate).total_seconds()}",
+                    flush=True,
+                )
                 lastUpdate = datetime.now(tzinfo)
                 lastUpdateValue = currentAve
                 try:
                     if db:
                         collection = db.waterDistance
                         x = collection.insert_one(
-                            {'distance': currentAve, 'when': lastUpdate}
+                            {"distance": currentAve, "when": lastUpdate}
                         )
                 except Exception as err:
                     print("mongodb insert failed for dist past time", flush=True)
@@ -187,18 +192,17 @@ async def sonicSensor():
 async def tempSensor():
     DHT_SENSOR = Adafruit_DHT.DHT22
     sensor = {
-        'name': "Tank Climate inside",
-        'pin': 4,
-        'lastTempUpdate': datetime.now(tzinfo),
-        'temperature': 0,
-        'dbTemperature': 0,
-        'humidity': 0,
-        'dbHumidity': 0,
+        "name": "Tank Climate inside",
+        "pin": 4,
+        "lastTempUpdate": datetime.now(tzinfo),
+        "temperature": 0,
+        "dbTemperature": 0,
+        "humidity": 0,
+        "dbHumidity": 0,
     }
     while True:
 
-        humidity, temperature = Adafruit_DHT.read_retry(
-            DHT_SENSOR, sensor["pin"])
+        humidity, temperature = Adafruit_DHT.read_retry(DHT_SENSOR, sensor["pin"])
 
         if humidity is not None and temperature is not None:
             t = round(((temperature * 9) / 5 + 32), 1)
@@ -207,19 +211,16 @@ async def tempSensor():
                 f"{sensor['name']} Temp= {t}*F Humidity={h}% at {sensor['lastTempUpdate'].strftime('%d/%m/%Y %H:%M:%S')}",
                 flush=True,
             )
-            print(
-                f'Now ---> {datetime.now(tzinfo).strftime("%d/%m/%Y %H:%M:%S")}')
+            print(f'Now ---> {datetime.now(tzinfo).strftime("%d/%m/%Y %H:%M:%S")}')
             sensor["humidity"] = h
             sensor["temperature"] = t
-            print(
-                f'dbTemp={sensor["dbTemperature"]} newTemp={t} {sensor["name"]}')
+            print(f'dbTemp={sensor["dbTemperature"]} newTemp={t} {sensor["name"]}')
             if (
                 abs(sensor["dbTemperature"] - t) > 0.9
                 or abs(sensor["dbHumidity"] - h) > 2
             ):
                 tmp = f"{t} °F, humidity: {h}%"
-                print(
-                    f"Updating with change {sensor['name']}, {tmp}", flush=True)
+                print(f"Updating with change {sensor['name']}, {tmp}", flush=True)
                 sensor["lastTempUpdate"] = datetime.now(tzinfo)
                 if db:
                     sensor["dbTemperature"] = t
@@ -297,14 +298,11 @@ def setup():
 
 
 if __name__ == "__main__":
+
     async def main():
         setup()
         # Schedule three calls *concurrently*:
-        await asyncio.gather(
-            sonicSensor(),
-            tempSensor(),
-            voltage()
-        )
+        await asyncio.gather(sonicSensor(), tempSensor(), voltage())
 
     asyncio.run(main())
-    print('done')
+    print("done")
