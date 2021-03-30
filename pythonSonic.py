@@ -139,7 +139,7 @@ async def sonicSensor():
                     if db:
                         collection = db.waterDistance
                         x = collection.insert_one(
-                            {'distance': currentAve, 'when': lastUpdate}
+                            {'distance': round(currentAve, 1), 'when': lastUpdate}
                         )
                         print(f"db says {x} ", flush=True)
                 except Exception as err:
