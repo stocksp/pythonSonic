@@ -38,18 +38,23 @@ def distance():
     # multiply with the sonic speed (34300 cm/s)
     # and divide by 2, because there and back
     distance = (TimeElapsed * 34300) / 2
-    #convert to inch
+    # convert to inch
     return distance * 0.3937008
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    counter = 0
+    arr = []
     try:
-        while True:
+        while counter < 10:
+            counter += 1
             dist = distance()
             print("Measured Distance = %.1f cm" % dist)
-            time.sleep(5)
+            arr.append(dist)
+            time.sleep(2)
 
         # Reset by pressing CTRL + C
     except KeyboardInterrupt:
         print("Measurement stopped by User")
         GPIO.cleanup()
+    print(arr)
