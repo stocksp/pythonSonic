@@ -164,7 +164,7 @@ async def sonicSensor():
                     exception_type = type(err).__name__
                     print(exception_type, flush=True)
 
-            await asyncio.sleep(5)
+            await asyncio.sleep(10)
 
         # Reset by pressing CTRL + C
     except KeyboardInterrupt:
