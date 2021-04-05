@@ -57,7 +57,7 @@ def distance():
         # and divide by 2, because there and back
 
         # speed of sound with temperature
-        speedOfSound = (331.5 + (0.6 * currentTemp)) / 100
+        speedOfSound = (331.5 + (0.6 * currentTemp)) * 100
         print(f'Speed of sound {speedOfSound:.0f}')
         distance = (TimeElapsed * speedOfSound) / 2
         # convert to inches
