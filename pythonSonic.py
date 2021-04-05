@@ -17,6 +17,8 @@ load_dotenv()
 timezone_offset = -8.0  # Pacific Standard Time (UTC−08:00)
 tzinfo = timezone(timedelta(hours=timezone_offset))
 db = None
+# used for sound calc
+currentTemp = 0
 # GPIO Mode (BOARD / BCM)
 GPIO.setmode(GPIO.BCM)
 
@@ -53,7 +55,11 @@ def distance():
         TimeElapsed = StopTime - StartTime
         # multiply with the sonic speed (34300 cm/s)
         # and divide by 2, because there and back
-        distance = (TimeElapsed * 34300) / 2
+
+        # speed of sound with temperature
+        speedOfSound = (331.5 + (0.6 * currentTemp)) / 100
+        print(f'Speed of sound {speedOfSound:.0f}')
+        distance = (TimeElapsed * speedOfSound) / 2
         # convert to inches
         return distance * 0.3937008
     except Exception as err:
@@ -208,6 +214,8 @@ async def tempSensor():
         humidity, temperature = Adafruit_DHT.read_retry(DHT_SENSOR, sensor["pin"])
 
         if humidity is not None and temperature is not None:
+            global currentTemp
+            currentTemp = temperature
             t = round(((temperature * 9) / 5 + 32), 1)
             h = round(humidity, 1)
             print(
