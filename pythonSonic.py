@@ -222,10 +222,10 @@ async def tempSensor():
                 f"{sensor['name']} Temp= {t}*F Humidity={h}% at {sensor['lastTempUpdate'].strftime('%d/%m/%Y %H:%M:%S')}",
                 flush=True,
             )
-            print(f'Now ---> {datetime.now(tzinfo).strftime("%d/%m/%Y %H:%M:%S")}')
+            print(f'Now ---> {datetime.now(tzinfo).strftime("%d/%m/%Y %H:%M:%S")}', flush=True)
             sensor["humidity"] = h
             sensor["temperature"] = t
-            print(f'dbTemp={sensor["dbTemperature"]} newTemp={t} {sensor["name"]}')
+            print(f'dbTemp={sensor["dbTemperature"]} newTemp={t} {sensor["name"]}', flush=True)
             if (
                 abs(sensor["dbTemperature"] - t) > 0.9
                 or abs(sensor["dbHumidity"] - h) > 2
