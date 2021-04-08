@@ -94,8 +94,8 @@ async def voltage():
                             }
                         )
                         print(f"db for voltage says {x} ", flush=True)
-                    except:
-                        print("mongodb insert failed voltage", flush=True)
+                    except Exception as err:
+                        print(f"Error in mongo insert {err}", flush=True)
 
             await asyncio.sleep(15)
     except KeyboardInterrupt:
@@ -183,19 +183,8 @@ async def sonicSensor():
             await asyncio.sleep(10)
 
         # Reset by pressing CTRL + C
-    except KeyboardInterrupt:
-        print("Measurement stopped by User")
-        GPIO.cleanup()
-
-    # while True:
-    #     goodRead = True
-    #     try:
-    #         val = sonar.distance * 0.3937008
-    #     except RuntimeError:
-    #         print("Retrying!")
-    #         goodRead = False
-    #     if goodRead:
-    #         print(f'dist= {val}')
+    except Exception as err:
+        print(f"Error in Sonic sensor{err}", flush=True)
 
 
 async def tempSensor():
@@ -209,92 +198,96 @@ async def tempSensor():
         "humidity": 0,
         "dbHumidity": 0,
     }
-    while True:
+    try:
+        while True:
 
-        humidity, temperature = Adafruit_DHT.read_retry(DHT_SENSOR, sensor["pin"])
+            humidity, temperature = Adafruit_DHT.read_retry(DHT_SENSOR, sensor["pin"])
 
-        if humidity is not None and temperature is not None:
-            global currentTemp
-            currentTemp = temperature
-            t = round(((temperature * 9) / 5 + 32), 1)
-            h = round(humidity, 1)
-            print(
-                f"{sensor['name']} Temp= {t}*F Humidity={h}% at {sensor['lastTempUpdate'].strftime('%d/%m/%Y %H:%M:%S')}",
-                flush=True,
-            )
-            print(f'Now ---> {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}', flush=True)
-            sensor["humidity"] = h
-            sensor["temperature"] = t
-            print(f'dbTemp={sensor["dbTemperature"]} newTemp={t} {sensor["name"]}', flush=True)
-            if (
-                abs(sensor["dbTemperature"] - t) > 0.9
-                or abs(sensor["dbHumidity"] - h) > 2
-            ):
-                tmp = f"{t} °F, humidity: {h}%"
-                print(f"Updating with change {sensor['name']}, {tmp}", flush=True)
-                sensor["lastTempUpdate"] = datetime.now(tzinfo)
-                if db:
+            if humidity is not None and temperature is not None:
+                global currentTemp
+                currentTemp = temperature
+                t = round(((temperature * 9) / 5 + 32), 1)
+                h = round(humidity, 1)
+                print(
+                    f"{sensor['name']} Temp= {t}*F Humidity={h}% at {sensor['lastTempUpdate'].strftime('%d/%m/%Y %H:%M:%S')}",
+                    flush=True,
+                )
+                print(f'Now ---> {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}', flush=True)
+                sensor["humidity"] = h
+                sensor["temperature"] = t
+                print(f'dbTemp={sensor["dbTemperature"]} newTemp={t} {sensor["name"]}', flush=True)
+                if (
+                    abs(sensor["dbTemperature"] - t) > 0.9
+                    or abs(sensor["dbHumidity"] - h) > 2
+                ):
+                    tmp = f"{t} °F, humidity: {h}%"
+                    print(f"Updating with change {sensor['name']}, {tmp}", flush=True)
+                    sensor["lastTempUpdate"] = datetime.now(tzinfo)
+                    if db:
+                        sensor["dbTemperature"] = t
+                        sensor["dbHumidity"] = h
+                        try:
+                            # print('we have a db')
+                            collection = db.climate
+                            x = collection.insert_one(
+                                {
+                                    "name": sensor["name"],
+                                    "when": datetime.now(tzinfo),
+                                    "temperature": t,
+                                    "humidity": h,
+                                }
+                            )
+                            print(f"db says {x} ", flush=True)
+                        except:
+                            print("mongodb insert failed", flush=True)
+
+                    else:
+                        print("no database available", flush=True)
+                # send if more than 30 minutes
+                elif (
+                    datetime.now(tzinfo) - sensor["lastTempUpdate"]
+                ).total_seconds() > 60 * 30:
+                    sensor["lastTempUpdate"] = datetime.now(tzinfo)
                     sensor["dbTemperature"] = t
                     sensor["dbHumidity"] = h
-                    try:
-                        # print('we have a db')
-                        collection = db.climate
-                        x = collection.insert_one(
-                            {
-                                "name": sensor["name"],
-                                "when": datetime.now(tzinfo),
-                                "temperature": t,
-                                "humidity": h,
-                            }
-                        )
-                        print(f"db says {x} ", flush=True)
-                    except:
-                        print("mongodb insert failed", flush=True)
+                    if db:
+                        try:
+                            # print('we have a db')
+                            collection = db.climate
+                            x = collection.insert_one(
+                                {
+                                    "name": sensor["name"],
+                                    "when": datetime.now(tzinfo),
+                                    "temperature": t,
+                                    "humidity": h,
+                                }
+                            )
+                            print(f"db says {x} ", flush=True)
+                        except:
+                            print("mongodb insert failed", flush=True)
 
-                else:
-                    print("no database available", flush=True)
-            # send if more than 30 minutes
-            elif (
-                datetime.now(tzinfo) - sensor["lastTempUpdate"]
-            ).total_seconds() > 60 * 30:
-                sensor["lastTempUpdate"] = datetime.now(tzinfo)
-                sensor["dbTemperature"] = t
-                sensor["dbHumidity"] = h
-                if db:
-                    try:
-                        # print('we have a db')
-                        collection = db.climate
-                        x = collection.insert_one(
-                            {
-                                "name": sensor["name"],
-                                "when": datetime.now(tzinfo),
-                                "temperature": t,
-                                "humidity": h,
-                            }
-                        )
-                        print(f"db says {x} ", flush=True)
-                    except:
-                        print("mongodb insert failed", flush=True)
+                    else:
+                        print("no database available", flush=True)
+                elif True:
+                    message = (
+                        f'temp diff= {abs(sensor["dbTemperature"] - t):.1f} '
+                        f'hum diff= {abs(sensor["dbHumidity"] - h):.1f} {sensor["name"]}'
+                    )
+                    print(message)
+                    # print(f'temp diff= {abs(sensor["dbTemperature"] - t):.1f} hum diff= {abs(sensor["dbHumidity"] - h):.1f} {sensor["name"]}')
 
-                else:
-                    print("no database available", flush=True)
-            elif True:
-                message = (
-                    f'temp diff= {abs(sensor["dbTemperature"] - t):.1f} '
-                    f'hum diff= {abs(sensor["dbHumidity"] - h):.1f} {sensor["name"]}'
+            else:
+                print(
+                    f"Failed to retrieve data from humidity sensor {sensor['name']}",
+                    flush=True,
                 )
-                print(message)
-                # print(f'temp diff= {abs(sensor["dbTemperature"] - t):.1f} hum diff= {abs(sensor["dbHumidity"] - h):.1f} {sensor["name"]}')
-
-        else:
-            print(
-                f"Failed to retrieve data from humidity sensor {sensor['name']}",
-                flush=True,
-            )
-        await asyncio.sleep(15)
+            await asyncio.sleep(15)
+    except Exception as err:
+        print(f"Error in temp sensor{err}", flush=True)
 
 
 def setup():
+
     mongoURI = os.getenv("MONGO_URL")
     global db
     while not db:
