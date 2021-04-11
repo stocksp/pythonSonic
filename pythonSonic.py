@@ -98,8 +98,10 @@ async def voltage():
                         print(f"Error in mongo insert {err}", flush=True)
 
             await asyncio.sleep(15)
-    except KeyboardInterrupt:
-        print("Measurement stopped by User", flush=True)
+    except Exception as err:
+        print(f"Error reading voltage {err}", flush=True)
+        return 0
+
 
 
 async def sonicSensor():
