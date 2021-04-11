@@ -103,7 +103,6 @@ async def voltage():
         return 0
 
 
-
 async def sonicSensor():
     distList = []
     lastUpdateValue = 0.0
