@@ -32,6 +32,7 @@ GPIO.setup(GPIO_ECHO, GPIO.IN)
 
 
 def distance():
+    timeout = 0.1
     try:
         # set Trigger to HIGH
         GPIO.output(GPIO_TRIGGER, True)
@@ -43,13 +44,20 @@ def distance():
         StartTime = time.time()
         StopTime = time.time()
 
+        timestamp = time.monotonic()
+
         # save StartTime
         while GPIO.input(GPIO_ECHO) == 0:
             StartTime = time.time()
+            if (time.monotonic() - timestamp) > timeout:
+                raise RuntimeError("Timed out")
 
         # save time of arrival
+        timestamp = time.monotonic()
         while GPIO.input(GPIO_ECHO) == 1:
             StopTime = time.time()
+            if time.monotonic() - timestamp > timeout:
+                raise RuntimeError("Timed out")
 
         # time difference between start and arrival
         TimeElapsed = StopTime - StartTime
@@ -58,7 +66,7 @@ def distance():
 
         # speed of sound with temperature
         speedOfSound = (331.5 + (0.6 * currentTemp)) * 100
-        print(f'Speed of sound {speedOfSound:.0f}')
+        print(f"Speed of sound {speedOfSound:.0f}")
         distance = (TimeElapsed * speedOfSound) / 2
         # convert to inches
         return distance * 0.3937008
@@ -213,10 +221,16 @@ async def tempSensor():
                     f"{sensor['name']} Temp= {t}*F Humidity={h}% at {sensor['lastTempUpdate'].strftime('%d/%m/%Y %H:%M:%S')}",
                     flush=True,
                 )
-                print(f'Now ---> {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}', flush=True)
+                print(
+                    f'Now ---> {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}',
+                    flush=True,
+                )
                 sensor["humidity"] = h
                 sensor["temperature"] = t
-                print(f'dbTemp={sensor["dbTemperature"]} newTemp={t} {sensor["name"]}', flush=True)
+                print(
+                    f'dbTemp={sensor["dbTemperature"]} newTemp={t} {sensor["name"]}',
+                    flush=True,
+                )
                 if (
                     abs(sensor["dbTemperature"] - t) > 0.9
                     or abs(sensor["dbHumidity"] - h) > 2
