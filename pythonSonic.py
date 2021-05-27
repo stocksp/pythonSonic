@@ -18,7 +18,8 @@ timezone_offset = -8.0  # Pacific Standard Time (UTC−08:00)
 tzinfo = timezone(timedelta(hours=timezone_offset))
 db = None
 # used for sound calc
-currentTemp = 0
+# temp sensor off for now
+currentTemp = 30.0
 # GPIO Mode (BOARD / BCM)
 GPIO.setmode(GPIO.BCM)
 
@@ -321,7 +322,7 @@ if __name__ == "__main__":
     async def main():
         setup()
         # Schedule three calls *concurrently*:
-        await asyncio.gather(sonicSensor(), tempSensor(), voltage())
+        await asyncio.gather(sonicSensor(),  voltage())
 
     asyncio.run(main())
     print("done")
