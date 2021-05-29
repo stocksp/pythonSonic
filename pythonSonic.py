@@ -42,7 +42,7 @@ device_file = device_folder + "/w1_slave"
 
 # logging
 log_formatter = logging.Formatter('%(asctime)s %(levelname)s %(funcName)s(%(lineno)d) %(message)s')
-logFile = 'applogs.txt'
+logFile = '/home/pi/pythonSonic/applogs.txt'
 my_handler = RotatingFileHandler(logFile, mode='a', maxBytes=2*1024*1024, backupCount=2, encoding=None, delay=0)
 my_handler.setFormatter(log_formatter)
 my_handler.setLevel(logging.INFO)
