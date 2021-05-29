@@ -2,13 +2,14 @@ from dotenv import load_dotenv
 import os
 import RPi.GPIO as GPIO
 import time
+import glob
 
 # import board
 # import adafruit_hcsr04
 from datetime import datetime, timezone, timedelta
 import asyncio
 from pymongo import MongoClient
-import Adafruit_DHT
+
 from MCP3008 import MCP3008
 from statistics import stdev
 from statistics import mean
@@ -30,6 +31,30 @@ GPIO_ECHO = 24
 # set GPIO direction (IN / OUT)
 GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
 GPIO.setup(GPIO_ECHO, GPIO.IN)
+
+base_dir = "/sys/bus/w1/devices/"
+device_folder = glob.glob(base_dir + "28*")[0]
+device_file = device_folder + "/w1_slave"
+
+
+def read_temp_raw():
+    f = open(device_file, "r")
+    lines = f.readlines()
+    f.close()
+    return lines
+
+
+def read_temp():
+    lines = read_temp_raw()
+    while lines[0].strip()[-3:] != "YES":
+        time.sleep(0.5)
+        lines = read_temp_raw()
+    equals_pos = lines[1].find("t=")
+    if equals_pos != -1:
+        temp_string = lines[1][equals_pos + 2:]
+        temp_c = float(temp_string) / 1000.0
+        temp_f = temp_c * 9.0 / 5.0 + 32.0
+        return temp_c, temp_f
 
 
 def distance():
@@ -198,7 +223,7 @@ async def sonicSensor():
 
 
 async def tempSensor():
-    DHT_SENSOR = Adafruit_DHT.DHT22
+    # DHT_SENSOR = Adafruit_DHT.DHT22
     sensor = {
         "name": "Tank Climate inside",
         "pin": 4,
@@ -211,13 +236,13 @@ async def tempSensor():
     try:
         while True:
 
-            humidity, temperature = Adafruit_DHT.read_retry(DHT_SENSOR, sensor["pin"])
-
-            if humidity is not None and temperature is not None:
+            # humidity, temperature = Adafruit_DHT.read_retry(DHT_SENSOR, sensor["pin"])
+            (temperature, f) = read_temp()
+            if temperature != 0:
                 global currentTemp
                 currentTemp = temperature
                 t = round(((temperature * 9) / 5 + 32), 1)
-                h = round(humidity, 1)
+                h = 0
                 print(
                     f"{sensor['name']} Temp= {t}*F Humidity={h}% at {sensor['lastTempUpdate'].strftime('%d/%m/%Y %H:%M:%S')}",
                     flush=True,
@@ -232,10 +257,7 @@ async def tempSensor():
                     f'dbTemp={sensor["dbTemperature"]} newTemp={t} {sensor["name"]}',
                     flush=True,
                 )
-                if (
-                    abs(sensor["dbTemperature"] - t) > 0.9
-                    or abs(sensor["dbHumidity"] - h) > 2
-                ):
+                if abs(sensor["dbTemperature"] - t) > 0.9:
                     tmp = f"{t} °F, humidity: {h}%"
                     print(f"Updating with change {sensor['name']}, {tmp}", flush=True)
                     sensor["lastTempUpdate"] = datetime.now(tzinfo)
@@ -294,7 +316,7 @@ async def tempSensor():
 
             else:
                 print(
-                    f"Failed to retrieve data from humidity sensor {sensor['name']}",
+                    f"Failed to retrieve data from temperature sensor {sensor['name']}",
                     flush=True,
                 )
             await asyncio.sleep(15)
@@ -322,7 +344,7 @@ if __name__ == "__main__":
     async def main():
         setup()
         # Schedule three calls *concurrently*:
-        await asyncio.gather(sonicSensor(),  voltage())
+        await asyncio.gather(sonicSensor(), voltage())
 
     asyncio.run(main())
     print("done")
