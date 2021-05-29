@@ -14,6 +14,9 @@ from MCP3008 import MCP3008
 from statistics import stdev
 from statistics import mean
 
+import logging
+from logging.handlers import RotatingFileHandler
+
 load_dotenv()
 timezone_offset = -8.0  # Pacific Standard Time (UTC−08:00)
 tzinfo = timezone(timedelta(hours=timezone_offset))
@@ -37,6 +40,17 @@ device_folder = glob.glob(base_dir + "28*")[0]
 device_file = device_folder + "/w1_slave"
 
 
+# logging
+log_formatter = logging.Formatter('%(asctime)s %(levelname)s %(funcName)s(%(lineno)d) %(message)s')
+logFile = 'applogs.txt'
+my_handler = RotatingFileHandler(logFile, mode='a', maxBytes=2*1024*1024, backupCount=2, encoding=None, delay=0)
+my_handler.setFormatter(log_formatter)
+my_handler.setLevel(logging.INFO)
+app_log = logging.getLogger('root')
+app_log.setLevel(logging.INFO)
+app_log.addHandler(my_handler)
+
+
 def read_temp_raw():
     f = open(device_file, "r")
     lines = f.readlines()
@@ -58,7 +72,8 @@ def read_temp():
             temp_c = float(temp_string) / 1000.0
             temp_f = temp_c * 9.0 / 5.0 + 32.0
             return temp_c, temp_f
-
+    else:
+        app_log.error("Failed to read temperature ")
 
 def distance():
     timeout = 0.1
@@ -101,6 +116,7 @@ def distance():
         return distance * 0.3937008
     except Exception as err:
         print(f"Error reading sensor {err}", flush=True)
+        app_log(f"Error reading sensor {err}")
         return 0
 
 
@@ -223,6 +239,7 @@ async def sonicSensor():
         # Reset by pressing CTRL + C
     except Exception as err:
         print(f"Error in Sonic sensor{err}", flush=True)
+        app_log.error(f"Error in Sonic sensor{err}")
 
 
 async def tempSensor():
@@ -244,14 +261,16 @@ async def tempSensor():
                 currentTemp = temperature
                 t = round(((temperature * 9) / 5 + 32), 1)
                 h = 0
+                msg = f"{sensor['name']} Temp= {t}*F Humidity={h}% at {sensor['lastTempUpdate'].strftime('%d/%m/%Y %H:%M:%S')}"
                 print(
-                    f"{sensor['name']} Temp= {t}*F Humidity={h}% at {sensor['lastTempUpdate'].strftime('%d/%m/%Y %H:%M:%S')}",
+                    msg,
                     flush=True,
                 )
                 print(
                     f'Now ---> {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}',
                     flush=True,
                 )
+                app_log.info(msg)
                 sensor["humidity"] = h
                 sensor["temperature"] = t
                 print(
@@ -261,6 +280,7 @@ async def tempSensor():
                 if abs(sensor["dbTemperature"] - t) > 0.9:
                     tmp = f"{t} °F, humidity: {h}%"
                     print(f"Updating with change {sensor['name']}, {tmp}", flush=True)
+                    app_log.info(f"Updating with change {sensor['name']}, {tmp}")
                     sensor["lastTempUpdate"] = datetime.now(tzinfo)
                     if db:
                         sensor["dbTemperature"] = t
@@ -279,9 +299,11 @@ async def tempSensor():
                             print(f"db says {x} ", flush=True)
                         except:
                             print("mongodb insert failed", flush=True)
+                            app_log.error("mongodb insert failed for temperature")
 
                     else:
                         print("no database available", flush=True)
+                        app_log.error("no database available in temperature")
                 # send if more than 30 minutes
                 elif (
                     datetime.now(tzinfo) - sensor["lastTempUpdate"]
@@ -313,6 +335,7 @@ async def tempSensor():
                         f'hum diff= {abs(sensor["dbHumidity"] - h):.1f} {sensor["name"]}'
                     )
                     print(message)
+                    app_log.info(message)
                     # print(f'temp diff= {abs(sensor["dbTemperature"] - t):.1f} hum diff= {abs(sensor["dbHumidity"] - h):.1f} {sensor["name"]}')
 
             else:
@@ -320,9 +343,11 @@ async def tempSensor():
                     f"Failed to retrieve data from temperature sensor {sensor['name']}",
                     flush=True,
                 )
+                app_log.error(f"Failed to retrieve data from temperature sensor {sensor['name']}")
             await asyncio.sleep(15)
     except Exception as err:
         print(f"Error in temp sensor{err}", flush=True)
+        app_log.error(f"Error in temp sensor {err}")
 
 
 def setup():
@@ -334,6 +359,7 @@ def setup():
             client = MongoClient(mongoURI)
             db = client.matchClub
             print("connected to mongodb!", flush=True)
+            app_log.info("connected to mongodb!")
         except Exception as err:
             print("failed to make MonbgoClient", flush=True)
             print(err, flush=True)
