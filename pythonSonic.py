@@ -51,7 +51,7 @@ def read_temp():
         counter += 1
         time.sleep(0.2)
         lines = read_temp_raw()
-    if lines.count >= 2:
+    if lines.count() >= 2:
         equals_pos = lines[1].find("t=")
         if equals_pos != -1:
             temp_string = lines[1][equals_pos + 2:]
