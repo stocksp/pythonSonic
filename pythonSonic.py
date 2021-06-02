@@ -61,7 +61,7 @@ def read_temp_raw():
 def read_temp():
     lines = read_temp_raw()
     counter = 0
-    while lines[0].strip()[-3:] != "YES" and counter < 3:
+    while len(lines) == 0 and lines[0].strip()[-3:] != "YES" and counter < 3:
         counter += 1
         time.sleep(0.2)
         lines = read_temp_raw()
@@ -74,6 +74,7 @@ def read_temp():
             return temp_c, temp_f
     else:
         app_log.error("Failed to read temperature ")
+
 
 def distance():
     timeout = 0.1
@@ -198,6 +199,7 @@ async def sonicSensor():
                 f"lastUpdateValue={lastUpdateValue}"
             )
             print(msg)
+            app_log.info(msg)
             diffDist = abs(lastUpdateValue - currentAve)
             if diffDist > 0.1:
                 print(f"Need to do a change update {diffDist}", flush=True)
