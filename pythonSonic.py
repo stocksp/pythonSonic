@@ -373,7 +373,7 @@ if __name__ == "__main__":
     async def main():
         setup()
         # Schedule three calls *concurrently*:
-        await asyncio.gather(sonicSensor(), tempSensor(), voltage())
+        await asyncio.gather(sonicSensor(), tempSensor())
 
     asyncio.run(main())
     print("done")
