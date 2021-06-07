@@ -201,6 +201,7 @@ async def sonicSensor():
             print(msg)
             app_log.info(msg)
             diffDist = abs(lastUpdateValue - currentAve)
+            print(f"diff is {diffDist}", flush=True)
             if diffDist > 0.1:
                 print(f"Need to do a change update {diffDist}", flush=True)
                 lastUpdate = datetime.now(tzinfo)
