@@ -131,7 +131,7 @@ async def voltage():
         while True:
             value = adc.read(channel=0)
             # fudge factor added of .815
-            voltage = value * 5 * 0.815 / 1023.0 * 3.3
+            voltage = value * 5 * 1.0 / 1023.0 * 3.3
             print(f"Voltage: {voltage:.2f}")
             # voltDiff = abs(voltage - lastVoltageUpdate)
             secDiff = (datetime.now(tzinfo) - lastVoltageUpdate).total_seconds()
@@ -374,7 +374,7 @@ if __name__ == "__main__":
     async def main():
         setup()
         # Schedule three calls *concurrently*:
-        await asyncio.gather(sonicSensor(), tempSensor())
+        await asyncio.gather(sonicSensor(), tempSensor(), voltage())
 
     asyncio.run(main())
     print("done")
