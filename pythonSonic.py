@@ -131,7 +131,7 @@ async def voltage():
         while True:
             value = adc.read(channel=0)
             # fudge factor added of .815
-            voltage = value * 5 * 1.0 / 1023.0 * 3.3
+            voltage = value * 5 * 0.9047 / 1023.0 * 3.3
             print(f"Voltage: {voltage:.2f}")
             # voltDiff = abs(voltage - lastVoltageUpdate)
             secDiff = (datetime.now(tzinfo) - lastVoltageUpdate).total_seconds()
