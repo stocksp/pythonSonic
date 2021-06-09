@@ -140,7 +140,7 @@ async def voltage():
                 vals.append(val)
                 count += 1
                 await asyncio.sleep(0.1)
-            lastVoltageUpdate = mean(vals)
+            voltage = mean(vals)
 
             print(f"Voltage: {voltage:.2f}")
             # voltDiff = abs(voltage - lastVoltageUpdate)
