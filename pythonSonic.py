@@ -41,12 +41,16 @@ device_file = device_folder + "/w1_slave"
 
 
 # logging
-log_formatter = logging.Formatter('%(asctime)s %(levelname)s %(funcName)s(%(lineno)d) %(message)s')
-logFile = '/home/pi/pythonSonic/applogs.txt'
-my_handler = RotatingFileHandler(logFile, mode='a', maxBytes=2*1024*1024, backupCount=2, encoding=None, delay=0)
+log_formatter = logging.Formatter(
+    "%(asctime)s %(levelname)s %(funcName)s(%(lineno)d) %(message)s"
+)
+logFile = "/home/pi/pythonSonic/applogs.txt"
+my_handler = RotatingFileHandler(
+    logFile, mode="a", maxBytes=2 * 1024 * 1024, backupCount=2, encoding=None, delay=0
+)
 my_handler.setFormatter(log_formatter)
 my_handler.setLevel(logging.INFO)
-app_log = logging.getLogger('root')
+app_log = logging.getLogger("root")
 app_log.setLevel(logging.INFO)
 app_log.addHandler(my_handler)
 
@@ -129,9 +133,15 @@ async def voltage():
 
     try:
         while True:
-            value = adc.read(channel=0)
-            # fudge factor added of .815
-            voltage = value * 5 * 0.9047 / 1023.0 * 3.3
+            count = 0
+            vals = []
+            while count < 50:
+                val = adc.read(channel=0) * 5 * 0.9047 / 1023.0 * 3.3
+                vals.append(val)
+                count += 1
+                await asyncio.sleep(0.1)
+            lastVoltageUpdate = mean(vals)
+
             print(f"Voltage: {voltage:.2f}")
             # voltDiff = abs(voltage - lastVoltageUpdate)
             secDiff = (datetime.now(tzinfo) - lastVoltageUpdate).total_seconds()
@@ -346,7 +356,9 @@ async def tempSensor():
                     f"Failed to retrieve data from temperature sensor {sensor['name']}",
                     flush=True,
                 )
-                app_log.error(f"Failed to retrieve data from temperature sensor {sensor['name']}")
+                app_log.error(
+                    f"Failed to retrieve data from temperature sensor {sensor['name']}"
+                )
             await asyncio.sleep(15)
     except Exception as err:
         print(f"Error in temp sensor{err}", flush=True)
