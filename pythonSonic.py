@@ -121,7 +121,7 @@ def distance():
         return distance * 0.3937008
     except Exception as err:
         print(f"Error reading sensor {err}", flush=True)
-        app_log(f"Error reading sensor {err}")
+        app_log.error(f"Error reading sensor {err}")
         return 0
 
 
