@@ -3,6 +3,7 @@ import os
 import RPi.GPIO as GPIO
 import time
 import glob
+import os
 
 # import board
 # import adafruit_hcsr04
@@ -21,6 +22,7 @@ load_dotenv()
 timezone_offset = -8.0  # Pacific Standard Time (UTC−08:00)
 tzinfo = timezone(timedelta(hours=timezone_offset))
 db = None
+failedWrites = 0
 # used for sound calc
 # temp sensor off for now
 currentTemp = 30.0
@@ -171,6 +173,7 @@ async def sonicSensor():
     distList = []
     lastUpdateValue = 0.0
     starting = True
+    global failedWrites
     try:
         while True:
             theDist = distance()
@@ -220,6 +223,7 @@ async def sonicSensor():
                 print(f"Need to do a change update {diffDist}", flush=True)
                 lastUpdate = datetime.now(tzinfo)
                 lastUpdateValue = currentAve
+                
                 try:
                     if db:
                         collection = db.waterDistance
@@ -231,6 +235,7 @@ async def sonicSensor():
                     print("mongodb insert failed for dist change", flush=True)
                     exception_type = type(err).__name__
                     print(exception_type, flush=True)
+                    failedWrites += 1
 
             # send an update if we haven't in an hour and half
             elif (datetime.now(tzinfo) - lastUpdate).total_seconds() > 60 * 30:
@@ -250,7 +255,9 @@ async def sonicSensor():
                     print("mongodb insert failed for dist past time", flush=True)
                     exception_type = type(err).__name__
                     print(exception_type, flush=True)
-
+                    failedWrites += 1
+            if failedWrites > 3:
+                os.system(os.system("sudo reboot"))
             await asyncio.sleep(10)
 
         # Reset by pressing CTRL + C
