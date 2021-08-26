@@ -163,7 +163,7 @@ async def voltage():
                         collection = db.voltage
                         x = collection.insert_one(data)
                         print(f"db for voltage says {x} ", flush=True)
-                        r = requests.post(addVoltageURL, data=data, timeout=5.0)
+                        r = requests.post(addVoltageURL, data=data, timeout=10.0)
                         print(f"local mongo db says {r.text} ", flush=True)
                     except Exception as err:
                         print(f"Error in mongo insert {err}", flush=True)
@@ -234,7 +234,7 @@ async def sonicSensor():
                         collection = db.waterDistance
                         x = collection.insert_one(data)
                         print(f"db says {x} ", flush=True)
-                        r = requests.post(addDistURL, data=data, timeout=5.0)
+                        r = requests.post(addDistURL, data=data, timeout=10.0)
                         print(f"local mongo db says {r.text} ", flush=True)
                 except Exception as err:
                     print("mongodb insert failed for dist change", flush=True)
@@ -255,7 +255,7 @@ async def sonicSensor():
                         data = {"distance": currentAve, "when": lastUpdate}
                         collection = db.waterDistance
                         x = collection.insert_one(data)
-                        r = requests.post(addDistURL, data=data, timeout=5.0)
+                        r = requests.post(addDistURL, data=data, timeout=10.0)
                         print(f"local mongo db says {r.text} ", flush=True)
                 except Exception as err:
                     print("mongodb insert failed for dist past time", flush=True)
