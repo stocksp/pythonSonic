@@ -3,7 +3,8 @@ import os
 import RPi.GPIO as GPIO
 import time
 import glob
-import os
+import requests
+
 
 # import board
 # import adafruit_hcsr04
@@ -56,6 +57,9 @@ app_log = logging.getLogger("root")
 app_log.setLevel(logging.INFO)
 app_log.addHandler(my_handler)
 
+addDistURL = "http://ubuntu:3000/api/addDist"
+addVoltageURL = "http://ubuntu:3000/api/addVoltage"
+
 
 def read_temp_raw():
     f = open(device_file, "r")
@@ -74,7 +78,7 @@ def read_temp():
     if len(lines) >= 2:
         equals_pos = lines[1].find("t=")
         if equals_pos != -1:
-            temp_string = lines[1][equals_pos + 2:]
+            temp_string = lines[1][equals_pos + 2 :]
             temp_c = float(temp_string) / 1000.0
             temp_f = temp_c * 9.0 / 5.0 + 32.0
             return temp_c, temp_f
@@ -152,14 +156,15 @@ async def voltage():
                 lastVoltageUpdate = datetime.now(tzinfo)
                 if db:
                     try:
+                        data = {
+                            "voltage": round(voltage, 1),
+                            "when": datetime.now(tzinfo),
+                        }
                         collection = db.voltage
-                        x = collection.insert_one(
-                            {
-                                "voltage": round(voltage, 1),
-                                "when": datetime.now(tzinfo),
-                            }
-                        )
+                        x = collection.insert_one(data)
                         print(f"db for voltage says {x} ", flush=True)
+                        r = requests.post(addVoltageURL, data=data, timeout=5.0)
+                        print(f"local mongo db says {r.text} ", flush=True)
                     except Exception as err:
                         print(f"Error in mongo insert {err}", flush=True)
 
@@ -223,14 +228,14 @@ async def sonicSensor():
                 print(f"Need to do a change update {diffDist}", flush=True)
                 lastUpdate = datetime.now(tzinfo)
                 lastUpdateValue = currentAve
-                
                 try:
                     if db:
+                        data = {"distance": round(currentAve, 1), "when": lastUpdate}
                         collection = db.waterDistance
-                        x = collection.insert_one(
-                            {"distance": round(currentAve, 1), "when": lastUpdate}
-                        )
+                        x = collection.insert_one(data)
                         print(f"db says {x} ", flush=True)
+                        r = requests.post(addDistURL, data=data, timeout=5.0)
+                        print(f"local mongo db says {r.text} ", flush=True)
                 except Exception as err:
                     print("mongodb insert failed for dist change", flush=True)
                     exception_type = type(err).__name__
@@ -247,10 +252,11 @@ async def sonicSensor():
                 lastUpdateValue = currentAve
                 try:
                     if db:
+                        data = {"distance": currentAve, "when": lastUpdate}
                         collection = db.waterDistance
-                        x = collection.insert_one(
-                            {"distance": currentAve, "when": lastUpdate}
-                        )
+                        x = collection.insert_one(data)
+                        r = requests.post(addDistURL, data=data, timeout=5.0)
+                        print(f"local mongo db says {r.text} ", flush=True)
                 except Exception as err:
                     print("mongodb insert failed for dist past time", flush=True)
                     exception_type = type(err).__name__
