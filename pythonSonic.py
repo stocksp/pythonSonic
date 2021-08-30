@@ -57,8 +57,8 @@ app_log = logging.getLogger("root")
 app_log.setLevel(logging.INFO)
 app_log.addHandler(my_handler)
 
-addDistURL = "http://ubuntu:3000/api/addDist"
-addVoltageURL = "http://ubuntu:3000/api/addVoltage"
+addDistURL = "http://ubuntu/api/addDist"
+addVoltageURL = "http://ubuntu/api/addVoltage"
 
 
 def read_temp_raw():
