@@ -59,6 +59,8 @@ app_log.addHandler(my_handler)
 
 addDistURL = "http://ubuntu/api/addDist"
 addVoltageURL = "http://ubuntu/api/addVoltage"
+addDistURLSinology = "http://192.168.86.236:3000/api/addDist"
+addVoltageURLSinology = "http://192.168.86.236:3000/api/addVoltage"
 
 
 def read_temp_raw():
@@ -163,6 +165,8 @@ async def voltage():
                         collection = db.voltage
                         x = collection.insert_one(data)
                         print(f"db for voltage says {x} ", flush=True)
+                        r = requests.post(addVoltageURLSinology, data=data, timeout=10.0)
+                        print(f"local mongo db says {r.text} ", flush=True)
                         r = requests.post(addVoltageURL, data=data, timeout=10.0)
                         print(f"local mongo db says {r.text} ", flush=True)
                     except Exception as err:
@@ -234,6 +238,8 @@ async def sonicSensor():
                         collection = db.waterDistance
                         x = collection.insert_one(data)
                         print(f"db says {x} ", flush=True)
+                        r = requests.post(addDistURLSinology, data=data, timeout=10.0)
+                        print(f"local mongo db says {r.text} ", flush=True)
                         r = requests.post(addDistURL, data=data, timeout=10.0)
                         print(f"local mongo db says {r.text} ", flush=True)
                 except Exception as err:
@@ -255,6 +261,8 @@ async def sonicSensor():
                         data = {"distance": currentAve, "when": lastUpdate}
                         collection = db.waterDistance
                         x = collection.insert_one(data)
+                        r = requests.post(addDistURLSinology, data=data, timeout=10.0)
+                        print(f"local mongo db says {r.text} ", flush=True)
                         r = requests.post(addDistURL, data=data, timeout=10.0)
                         print(f"local mongo db says {r.text} ", flush=True)
                 except Exception as err:
