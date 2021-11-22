@@ -3,8 +3,8 @@ import os
 import RPi.GPIO as GPIO
 import time
 import glob
-import requests
-
+import sys
+from time import sleep
 
 # import board
 # import adafruit_hcsr04
@@ -22,7 +22,7 @@ from logging.handlers import RotatingFileHandler
 load_dotenv()
 timezone_offset = -8.0  # Pacific Standard Time (UTC−08:00)
 tzinfo = timezone(timedelta(hours=timezone_offset))
-db = None
+db = {}
 failedWrites = 0
 # used for sound calc
 # temp sensor off for now
@@ -57,12 +57,6 @@ app_log = logging.getLogger("root")
 app_log.setLevel(logging.INFO)
 app_log.addHandler(my_handler)
 
-addDistURL = "http://ubuntu/api/addDist"
-addVoltageURL = "http://ubuntu/api/addVoltage"
-addDistURLSinology = "http://192.168.86.236:3000/api/addDist"
-addVoltageURLSinology = "http://192.168.86.236:3000/api/addVoltage"
-
-
 def read_temp_raw():
     f = open(device_file, "r")
     lines = f.readlines()
@@ -80,7 +74,7 @@ def read_temp():
     if len(lines) >= 2:
         equals_pos = lines[1].find("t=")
         if equals_pos != -1:
-            temp_string = lines[1][equals_pos + 2 :]
+            temp_string = lines[1][equals_pos + 2:]
             temp_c = float(temp_string) / 1000.0
             temp_f = temp_c * 9.0 / 5.0 + 32.0
             return temp_c, temp_f
@@ -156,21 +150,29 @@ async def voltage():
             if startingUp or secDiff > 60 * 30:
                 startingUp = False
                 lastVoltageUpdate = datetime.now(tzinfo)
-                if db:
+                if 'Synology' in db:
                     try:
                         data = {
                             "voltage": round(voltage, 1),
                             "when": datetime.now(tzinfo),
                         }
-                        collection = db.voltage
+                        collection = db['Synology'].voltage
                         x = collection.insert_one(data)
-                        print(f"db for voltage says {x} ", flush=True)
-                        r = requests.post(addVoltageURLSinology, data=data, timeout=10.0)
-                        print(f"local mongo db says {r.text} ", flush=True)
-                        r = requests.post(addVoltageURL, data=data, timeout=10.0)
-                        print(f"local mongo db says {r.text} ", flush=True)
+                        print(f"db for voltage Synology says {x} ", flush=True)
                     except Exception as err:
-                        print(f"Error in mongo insert {err}", flush=True)
+                        print(f"Error in mongo insert voltage Synology {err}", flush=True)
+                if 'Atlas' in db:
+                    try:
+                        data = {
+                            "voltage": round(voltage, 1),
+                            "when": datetime.now(tzinfo),
+                        }
+                        collection = db['Atlas'].voltage
+                        x = collection.insert_one(data)
+                        print(f"db for voltage Atlas says {x} ", flush=True)
+
+                    except Exception as err:
+                        print(f"Error in mongo insert voltage Atlas {err}", flush=True)
 
             await asyncio.sleep(15)
     except Exception as err:
@@ -233,17 +235,26 @@ async def sonicSensor():
                 lastUpdate = datetime.now(tzinfo)
                 lastUpdateValue = currentAve
                 try:
-                    if db:
+                    if 'Synology' in db:
                         data = {"distance": round(currentAve, 1), "when": lastUpdate}
-                        collection = db.waterDistance
+                        collection = db['Synology'].waterDistance
                         x = collection.insert_one(data)
-                        print(f"db says {x} ", flush=True)
-                        r = requests.post(addDistURLSinology, data=data, timeout=10.0)
-                        print(f"local mongo db says {r.text} ", flush=True)
-                        r = requests.post(addDistURL, data=data, timeout=10.0)
-                        print(f"local mongo db says {r.text} ", flush=True)
+                        print(f"db Synology dist says {x} ", flush=True)
+
                 except Exception as err:
-                    print("mongodb insert failed for dist change", flush=True)
+                    print("mongodb insert failed for dist change Synology", flush=True)
+                    exception_type = type(err).__name__
+                    print(exception_type, flush=True)
+                    failedWrites += 1
+                try:
+                    if 'Atlas' in db:
+                        data = {"distance": round(currentAve, 1), "when": lastUpdate}
+                        collection = db['Atlas'].waterDistance
+                        x = collection.insert_one(data)
+                        print(f"db Atlas dist says {x} ", flush=True)
+
+                except Exception as err:
+                    print("mongodb insert failed for dist change Atlas", flush=True)
                     exception_type = type(err).__name__
                     print(exception_type, flush=True)
                     failedWrites += 1
@@ -257,16 +268,24 @@ async def sonicSensor():
                 lastUpdate = datetime.now(tzinfo)
                 lastUpdateValue = currentAve
                 try:
-                    if db:
+                    if 'Synology' in db:
                         data = {"distance": currentAve, "when": lastUpdate}
-                        collection = db.waterDistance
+                        collection = db['Synology'].waterDistance
                         x = collection.insert_one(data)
-                        r = requests.post(addDistURLSinology, data=data, timeout=10.0)
-                        print(f"local mongo db says {r.text} ", flush=True)
-                        r = requests.post(addDistURL, data=data, timeout=10.0)
-                        print(f"local mongo db says {r.text} ", flush=True)
+
                 except Exception as err:
-                    print("mongodb insert failed for dist past time", flush=True)
+                    print("mongodb insert Synology failed for dist past time", flush=True)
+                    exception_type = type(err).__name__
+                    print(exception_type, flush=True)
+                    failedWrites += 1
+                try:
+                    if 'Atlas' in db:
+                        data = {"distance": currentAve, "when": lastUpdate}
+                        collection = db['Atlas'].waterDistance
+                        x = collection.insert_one(data)
+
+                except Exception as err:
+                    print("mongodb insert Atlas failed for dist past time", flush=True)
                     exception_type = type(err).__name__
                     print(exception_type, flush=True)
                     failedWrites += 1
@@ -315,28 +334,38 @@ async def tempSensor():
                     f'dbTemp={sensor["dbTemperature"]} newTemp={t} {sensor["name"]}',
                     flush=True,
                 )
+                data = {
+                    "name": sensor["name"],
+                    "when": datetime.now(tzinfo),
+                    "temperature": t,
+                    "humidity": h,
+                    }
                 if abs(sensor["dbTemperature"] - t) > 0.9:
                     tmp = f"{t} °F, humidity: {h}%"
                     print(f"Updating with change {sensor['name']}, {tmp}", flush=True)
                     app_log.info(f"Updating with change {sensor['name']}, {tmp}")
                     sensor["lastTempUpdate"] = datetime.now(tzinfo)
-                    if db:
+                    if 'Synology' in db:
                         sensor["dbTemperature"] = t
                         sensor["dbHumidity"] = h
                         try:
                             # print('we have a db')
-                            collection = db.climate
-                            x = collection.insert_one(
-                                {
-                                    "name": sensor["name"],
-                                    "when": datetime.now(tzinfo),
-                                    "temperature": t,
-                                    "humidity": h,
-                                }
-                            )
+                            collection = db['Synology'].climate
+                            x = collection.insert_one(data)
                             print(f"db says {x} ", flush=True)
                         except:
-                            print("mongodb insert failed", flush=True)
+                            print("mongodb insert climate failed Synology", flush=True)
+                            app_log.error("mongodb insert failed for temperature")
+                    if 'Atlas' in db:
+                        sensor["dbTemperature"] = t
+                        sensor["dbHumidity"] = h
+                        try:
+                            # print('we have a db')
+                            collection = db['Atlas'].climate
+                            x = collection.insert_one(data)
+                            print(f"db says {x} ", flush=True)
+                        except:
+                            print("mongodb insert climate failed Synology", flush=True)
                             app_log.error("mongodb insert failed for temperature")
 
                     else:
@@ -349,21 +378,28 @@ async def tempSensor():
                     sensor["lastTempUpdate"] = datetime.now(tzinfo)
                     sensor["dbTemperature"] = t
                     sensor["dbHumidity"] = h
-                    if db:
+                    if 'Synology' in db:
+                        sensor["dbTemperature"] = t
+                        sensor["dbHumidity"] = h
                         try:
                             # print('we have a db')
-                            collection = db.climate
-                            x = collection.insert_one(
-                                {
-                                    "name": sensor["name"],
-                                    "when": datetime.now(tzinfo),
-                                    "temperature": t,
-                                    "humidity": h,
-                                }
-                            )
+                            collection = db['Synology'].climate
+                            x = collection.insert_one(data)
                             print(f"db says {x} ", flush=True)
                         except:
-                            print("mongodb insert failed", flush=True)
+                            print("mongodb insert climate failed Synology", flush=True)
+                            app_log.error("mongodb insert failed for temperature")
+                    if 'Atlas' in db:
+                        sensor["dbTemperature"] = t
+                        sensor["dbHumidity"] = h
+                        try:
+                            # print('we have a db')
+                            collection = db['Atlas'].climate
+                            x = collection.insert_one(data)
+                            print(f"db says {x} ", flush=True)
+                        except:
+                            print("mongodb insert climate failed Synology", flush=True)
+                            app_log.error("mongodb insert failed for temperature")
 
                     else:
                         print("no database available", flush=True)
@@ -391,19 +427,39 @@ async def tempSensor():
 
 
 def setup():
-
-    mongoURI = os.getenv("MONGO_URL")
+    mongoURISynology = os.getenv("MONGO_URL_SYNOLOGY")
+    mongoURIAtlas = os.getenv("MONGO_URL_ATLAS")
     global db
-    while not db:
+    counter = 0
+    while 'Atlas' not in db:
         try:
-            client = MongoClient(mongoURI)
-            db = client.matchClub
-            print("connected to mongodb!", flush=True)
-            app_log.info("connected to mongodb!")
+            client = MongoClient(mongoURIAtlas)
+            db['Atlas'] = client.matchClub
+            print("connected to mongodb Atlas!", flush=True)
         except Exception as err:
             print("failed to make MonbgoClient", flush=True)
             print(err, flush=True)
-        time.sleep(5)
+            counter = counter + 1
+            if counter > 5:
+                print("Forcing a system restart", flush=True)
+                python = sys.executable
+                os.execl(python, python, *sys.argv)
+            sleep(5 + counter * 10)
+
+    while 'Synology' not in db:
+        try:
+            client = MongoClient(mongoURISynology)
+            db['Synology'] = client.water
+            print("connected to mongodb Synology!", flush=True)
+        except Exception as err:
+            print("failed to make MonbgoClient for Synology", flush=True)
+            print(err, flush=True)
+            counter = counter + 1
+            if counter > 5:
+                print("Forcing a system restart", flush=True)
+                python = sys.executable
+                os.execl(python, python, *sys.argv)
+            sleep(5 + counter * 10)
 
 
 if __name__ == "__main__":
