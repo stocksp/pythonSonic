@@ -184,6 +184,7 @@ async def sonicSensor():
     lastUpdateValue = 0.0
     starting = True
     global failedWrites
+    badDistReads = 0
     try:
         while True:
             theDist = distance()
@@ -215,6 +216,9 @@ async def sonicSensor():
                 print(f"ignoring {theDist} previousAve= {previousAve}", flush=True)
                 distList.pop()
                 await asyncio.sleep(10)
+                badDistReads += 1
+                if badDistReads > 50:
+                    os.system(os.system("sudo reboot"))
                 continue
             # keep list at 6 AND remove errors of 0
             if len(distList) > 15:
@@ -233,6 +237,7 @@ async def sonicSensor():
                 print(f"Need to do a change update {diffDist}", flush=True)
                 lastUpdate = datetime.now(tzinfo)
                 lastUpdateValue = currentAve
+                badDistReads = 0
                 try:
                     if 'Synology' in db:
                         data = {"distance": round(currentAve, 1), "when": lastUpdate}
@@ -266,6 +271,7 @@ async def sonicSensor():
                 )
                 lastUpdate = datetime.now(tzinfo)
                 lastUpdateValue = currentAve
+                badDistReads = 0
                 try:
                     if 'Synology' in db:
                         data = {"distance": currentAve, "when": lastUpdate}
