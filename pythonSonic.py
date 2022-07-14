@@ -11,8 +11,7 @@ from time import sleep
 from datetime import datetime, timezone, timedelta
 import asyncio
 from pymongo import MongoClient
-
-from MCP3008 import MCP3008
+from  MCP3008 import MCP3008
 from statistics import stdev
 from statistics import mean
 
@@ -196,24 +195,24 @@ async def sonicSensor():
             if theDist != 0:
                 distList.append(theDist)
             else:
-                print(f"ignoring {theDist}", flush=True)
+                print(f"ignoring {theDist} previous  ave = {previousAve}", flush=True)
                 await asyncio.sleep(5)
                 continue
             # keep reading until 6 elements
             if starting and len(distList) < 15:
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
                 continue
             elif starting:
                 starting = False
                 standardDev = stdev(distList)
                 ave = mean(distList)
                 distList = list(filter(lambda x: abs(x - ave) < standardDev, distList))
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
                 continue
 
             # ignore bad values?
             if abs(theDist - previousAve) > 2.0 or theDist == 0:
-                print(f"ignoring {theDist}", flush=True)
+                print(f"ignoring {theDist} previousAve= {previousAve}", flush=True)
                 distList.pop()
                 await asyncio.sleep(10)
                 continue
@@ -291,7 +290,7 @@ async def sonicSensor():
                     failedWrites += 1
             if failedWrites > 3:
                 os.system(os.system("sudo reboot"))
-            await asyncio.sleep(10)
+            await asyncio.sleep(3)
 
         # Reset by pressing CTRL + C
     except Exception as err:

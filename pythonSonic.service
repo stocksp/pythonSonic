@@ -1,0 +1,10 @@
+[Unit]
+Description=sonic distance sensor
+
+[Service]
+ExecStartPre=/bin/sleep 10
+ExecStart=/home/pi/.pyenv/versions/3.9.2/bin/python /home/pi/pythonSonic/pythonSonic.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
