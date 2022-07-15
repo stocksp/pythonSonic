@@ -212,7 +212,7 @@ async def sonicSensor():
                 continue
 
             # ignore bad values?
-            if abs(theDist - previousAve) > 2.0 or theDist == 0:
+            if abs(theDist - previousAve) > 2.0 or theDist == 0 or theDist > 60:
                 print(f"ignoring {theDist} previousAve= {previousAve}", flush=True)
                 distList.pop()
                 await asyncio.sleep(10)
