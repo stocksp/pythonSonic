@@ -193,11 +193,14 @@ async def sonicSensor():
                 previousAve = round(mean(distList), 2)
             else:
                 previousAve = 0.0
-            if theDist != 0:
+            if theDist != 0 and theDist < 60:
                 distList.append(theDist)
             else:
                 print(f"ignoring {theDist} previous  ave = {previousAve}", flush=True)
                 await asyncio.sleep(5)
+                badDistReads += 1
+                if badDistReads > 50:
+                    os.system(os.system("sudo reboot"))
                 continue
             # keep reading until 6 elements
             if starting and len(distList) < 15:
